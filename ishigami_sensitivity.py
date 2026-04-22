@@ -14,48 +14,8 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel, RBF
 from SALib.sample.sobol import sample as SobolSample
 from SALib.analyze.sobol import analyze
-
-
-def gp_prediction(l, sigma_f, sigma_n , x_train, y_train):
-    """
-    Apply Gaussian Process (GP) regression to fit a model to training data.
-
-    Parameters
-    ----------
-    l : float
-        Length scale parameter for the RBF kernel.
-    sigma_f : float
-        Signal variance parameter for the constant kernel.
-    sigma_n : float
-        Noise variance parameter for the GP model.
-    x_train : array_like of shape (n_samples, n_features)
-        Input training data.
-    y_train : array_like of shape (n_samples,)
-        Target training values.
-
-    Returns
-    -------
-    gp : sklearn.gaussian_process.GaussianProcessRegressor
-        Fitted Gaussian Process model.
-    """ 
-
-    # Kernel definition 
-    # kernel = (ConstantKernel(constant_value=sigma_f) * 
-    #           RBF(length_scale=l, length_scale_bounds=(0.5, 500)))
-    
-    kernel = (ConstantKernel(constant_value=sigma_f) * RBF(length_scale=l))
-    
-    # kernel = (ConstantKernel(constant_value=sigma_f, constant_value_bounds='fixed') *
-    #           RBF(length_scale=l, length_scale_bounds='fixed'))
-    
-    # GP model
-    gp = GaussianProcessRegressor(kernel=kernel, alpha=(2 * sigma_n)**2,
-                                  n_restarts_optimizer=10)
-        
-    # Fitting in the gp model
-    gp.fit(x_train, y_train)
-
-    return gp
+import os
+import joblib
 
 
 def draw_from_ishigami(samples, noise_level=0.5, seed=None, plot=False):
@@ -84,9 +44,9 @@ def draw_from_ishigami(samples, noise_level=0.5, seed=None, plot=False):
     # Calculate Ishigami function
     a = 7
     b = 0.1
-    f = df.ishigami(samples['x1'], samples['x2'], samples['x3'], a, b)
+    f = df.ishigami(samples["x1"], samples["x2"], samples["x3"], a, b)
     n_samples = len(f)
-    
+
     # Add nosie
     np.random.seed(seed)
     epsilon = np.random.uniform(-noise_level, noise_level, n_samples)
@@ -96,16 +56,14 @@ def draw_from_ishigami(samples, noise_level=0.5, seed=None, plot=False):
     # Noisy samples
     if plot:
         plt.figure()
-        plt.errorbar(np.arange(0, len(f)), f, yerr=f_std, linestyle='None',
-                     marker='.')
-        plt.xlabel('Sample #')
-        plt.ylabel('$f(x_1, x_2, x_3)$')
-    
+        plt.errorbar(np.arange(0, len(f)), f, yerr=f_std, linestyle="None", marker=".")
+        plt.xlabel("Sample #")
+        plt.ylabel("$f(x_1, x_2, x_3)$")
+
     return f, f_std
 
 
-def GP_sensitivity_analysis(samples, f, f_std, problem, master_seed,
-                            n_upsamples=2**14):
+def GP_sensitivity_analysis(gp, problem, master_seed, n_upsamples=2**14):
     """
     Perform Sobol sensitivity analysis using a Gaussian Process
     surrogate model.
@@ -132,105 +90,24 @@ def GP_sensitivity_analysis(samples, f, f_std, problem, master_seed,
     -------
     results : dict
         Dictionary containing Sobol sensitivity indices computed from the GP model.
-    master_seed : int
-        Seed used for Sobol sampling.
     """
-    # Create GP surrogate model
-    x_train = np.array([samples['x1'], samples['x2'], samples['x3']]).T
-    y_train = np.copy(f)
-    gp = gp_prediction(1, 3, f_std, x_train, y_train)
 
     # Create Sobol samples for GP and predict
     sens_samples = SobolSample(problem, n_upsamples, seed=master_seed)
+
+    print("Predicting GP samples.")
     y_pred, y_std = gp.predict(sens_samples, return_std=True)
-    
+
     # Perform sensitivity analysis on GP prediction
-    results = analyze(problem, y_pred, parallel=True, n_processors=12,
-                      num_resamples=100)
+    print("Performing GP Sobol sensitivity analysis.")
+    results = analyze(
+        problem, y_pred, parallel=True, n_processors=12, num_resamples=100
+    )
 
-    return results, master_seed
-
-
-def GP_resampling_analysis(samples, f, f_std, problem, master_seed,
-                           n_upsamples=2**14, n_reruns=10):
-    """
-    Perform resampled Sobol sensitivity analysis using a Gaussian Process
-    surrogate model.
-
-    The GP surrogate is resampled multiple times to estimate confidence
-    intervals for the Sobol sensitivity indices.
-
-    Parameters
-    ----------
-    samples : dict of array_like
-        Input samples used to train the GP model, with keys 'x1', 'x2', and 'x3'.
-    f : ndarray of shape (n_samples,)
-        Function evaluations corresponding to the samples.
-    f_std : ndarray of shape (n_samples,)
-        Standard deviation (uncertainty) for each function evaluation.
-    problem : dict
-        Problem definition dictionary compatible with SALib, containing the number
-        of variables, names, and bounds.
-    master_seed : int
-        Random seed for reproducibility in Sobol sampling.
-    n_upsamples : int, optional
-        Number of Sobol samples used for each GP resampling. Default is 2**14.
-    n_reruns : int, optional
-        Number of resampled analyses to perform for uncertainty estimation.
-        Default is 10.
-
-    Returns
-    -------
-    results : dict
-        Dictionary containing mean and confidence intervals of Sobol sensitivity indices.
-    seeds : ndarray of shape (n_reruns,)
-        Random seeds used for each resampling iteration.
-
-    Notes
-    -----
-    This function can be computationally expensive due to multiple GP
-    resampling and Sobol analyses.
-    """
-    # Create GP surrogate model
-    x_train = np.array([samples['x1'], samples['x2'], samples['x3']]).T
-    y_train = np.copy(f)
-    gp = gp_prediction(1, 3, f_std, x_train, y_train)
-    
-    # Set up sensitivity analysis
-    results = {}
-    S1_results = np.zeros([10, 3])
-    S1_conf_results = np.zeros([10, 3])
-    S2_results = np.zeros([10, 3, 3])
-    S2_conf_results = np.zeros([10, 3, 3])
-    ST_results = np.zeros([10, 3])
-    ST_conf_results = np.zeros([10, 3])
-
-    # Resample from the GP to incorporate uncertainties
-    rng = np.random.default_rng(master_seed)
-    seeds = rng.integers(0, 1E10, n_reruns)
-    for i, seed in enumerate(seeds):
-        sens_samples = SobolSample(problem, n_upsamples, seed=seed)
-        y_pred, y_std = gp.predict(sens_samples, return_std=True)
-        result = analyze(problem, y_pred, num_resamples=1)
-        S1_results[i] = result['S1']
-        S1_conf_results[i] = result['S1_conf']
-        S2_results[i] = result['S2']
-        S2_conf_results[i] = result['S2_conf']
-        ST_results[i] = result['ST']
-        ST_conf_results[i] = result['ST_conf']
-
-    # Save results
-    results['S1'] = np.mean(S1_results, axis=0)
-    results['S1_conf'] = 2 * np.std(S1_results, axis=0)
-    results['S2'] = np.mean(S2_results, axis=0)
-    results['S2_conf'] = 2 * np.std(ST_results, axis=0)
-    results['ST'] = np.mean(ST_results, axis=0)
-    results['ST_conf'] = 2 * np.std(ST_results, axis=0)
-    
-    return results, seeds
+    return results
 
 
-def main(seed):
+def main():
     """
     Run Gaussian Process and traditional Sobol sensitivity analyses for
     multiple sample sizes using the Ishigami function.
@@ -250,54 +127,57 @@ def main(seed):
         List of sample sizes used in the analyses.
     seeds : ndarray
         Random seeds used in the GP sensitivity analyses.
-    """    
-    n_samples_list = [2**i for i in range(7, 14)]
+    """
+    gp_dir = "noiseless_ishigami"
+    setup = rw.json_read_dictionary(f"output/gp_models/{gp_dir}/setup.json")
+    n_samples_list = setup["n_samples"]
 
-    # Salib problem
-    problem = {'num_vars': 3, 'names': ['x1', 'x2', 'x3'],
-               'bounds': [[-np.pi, np.pi], [-np.pi, np.pi], [-np.pi, np.pi]]}
-    
-    # Draw unique Sobol samples for GP sensitivity analysis
-    bounds = {f'x{i}': [-np.pi, np.pi] for i in range(1, 4)}
+    # List of GP models sorted in ascending order
+    gp_model_names = os.listdir(f"output/gp_models/{gp_dir}")
+    gp_model_names.remove("setup.json")
+    sort_keys = [int(gp.split("_")[-1].split(".")[0]) for gp in gp_model_names]
+    sort_args = np.argsort(sort_keys)
+    gp_model_names = np.array(gp_model_names)[sort_args]
 
     gp_results = []
     sal_results = []
-    for n_samples in n_samples_list:
-        gp_samples = samplers.get_sobol_samples(bounds, n_samples, seed=seed)
-        
-        # Calculate noisy Ishigami
-        f_gp, f_gp_std = draw_from_ishigami(gp_samples, seed=seed)
-        
-        gp_result, seeds = GP_sensitivity_analysis(gp_samples, f_gp, f_gp_std,
-                                                   problem, seed)
-        
+    for gp_model_name in gp_model_names:
+        gp_model_dict = joblib.load(f"output/gp_models/{gp_dir}/{gp_model_name}")
+        gp_samples = gp_model_dict["samples"]
+        gp_model = gp_model_dict["gp"]
+        seed = setup["seed"]
+        gp_result = GP_sensitivity_analysis(gp_model, setup, seed)
+
         # Draw samples for traditional sensitivity analysis
+        n_samples = len(gp_samples)
         if n_samples % 8 == 0:
-            sal_samples = SobolSample(problem, int(n_samples / 8))
+            sal_samples = SobolSample(setup, int(n_samples / 8))
         else:
-            raise ValueError('n_samples is not divisible by 8.')
-        
-        sal_samples = {f'x{i + 1}': sal_sample for i, sal_sample in
-                       enumerate(sal_samples.T)}
-        
-        f_sal, f_sal_std = draw_from_ishigami(sal_samples, seed=seed)
-        sal_result = analyze(problem, f_sal)
-        
+            raise ValueError("n_samples is not divisible by 8.")
+
+        sal_samples = {
+            f"x{i + 1}": sal_sample for i, sal_sample in enumerate(sal_samples.T)
+        }
+
+        f_sal, f_sal_std = draw_from_ishigami(sal_samples, noise_level=0.01, seed=seed)
+
+        print("Performing traditional Sobol sensitivity analysis.")
+        sal_result = analyze(setup, f_sal)
+
         gp_results.append(rw.listify(gp_result))
         sal_results.append(rw.listify(sal_result))
-    
-    return gp_results, sal_results, n_samples_list, seeds
+        print(f"{gp_model_name} ({n_samples} samples) done.")
+
+    return gp_results, sal_results, n_samples_list
 
 
-if __name__ == '__main__':
-    # seed = 29475183  # results_1.json
-    # seed = 19475183  # results_2.json
-    # seed = 39475183  # results_3.json
-    seed = np.random.randint(0, 1E8)
-    
-    gp_results, sal_results, n_samples, seeds = main(seed)
-    
-    to_save = {'gp_results': gp_results, 'sal_results': sal_results,
-               'n_samples': n_samples, 'gp_seeds': seeds}
+if __name__ == "__main__":
+    gp_results, sal_results, n_samples = main()
 
-    rw.json_write_dictionary('results_test.json', to_save)
+    to_save = {
+        "gp_results": gp_results,
+        "sal_results": sal_results,
+        "n_samples": n_samples,
+    }
+
+    rw.json_write_dictionary("noiseless_ishigami.json", to_save)
