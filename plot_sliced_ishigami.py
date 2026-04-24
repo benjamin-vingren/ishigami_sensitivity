@@ -1,5 +1,4 @@
 import joblib
-import os
 from ishigami_sensitivity import list_model_names
 from utilities import samplers, read_write, plot_utils
 from utilities import distribution_functions as dfs
@@ -90,16 +89,13 @@ def plot_sliced_ishigami(samples, y, x3_labels, normalize=True):
         ax.set_yticklabels(tick_labels)
 
 
-if __name__ == "__main__":
-    plot_utils.set_nes_plot_style(large_font=True)
-
+def main(gp_dir, gp_name_1, gp_name_2):
     # GP models
-    gp_dir = "noiseless_ishigami"
     gp_dir_path = f"output/gp_models/{gp_dir}"
     gp_model_names = list_model_names(gp_dir)
-    gp_dict_1 = joblib.load(f"{gp_dir_path}/{gp_model_names[0]}")
+    gp_dict_1 = joblib.load(f"{gp_dir_path}/{gp_name_1}")
     gp_1 = gp_dict_1["gp"]
-    gp_dict_2 = joblib.load(f"{gp_dir_path}/{gp_model_names[5]}")
+    gp_dict_2 = joblib.load(f"{gp_dir_path}/{gp_name_2}")
     gp_2 = gp_dict_2["gp"]
 
     # Setup
@@ -156,3 +152,12 @@ if __name__ == "__main__":
     )
 
     input("Press Enter to exit...")
+
+
+if __name__ == "__main__":
+    plot_utils.set_nes_plot_style(large_font=True)
+    main(
+        "noiseless_ishigami",
+        "noiseless_ishigami_0.joblib",
+        "noiseless_ishigami_5.joblib",
+    )
