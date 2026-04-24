@@ -107,6 +107,16 @@ def GP_sensitivity_analysis(gp, problem, master_seed, n_upsamples=2**14):
     return results
 
 
+def list_model_names(gp_directory_path):
+    gp_model_names = os.listdir(f"output/gp_models/{gp_directory_path}")
+    gp_model_names.remove("setup.json")
+    sort_keys = [int(gp.split("_")[-1].split(".")[0]) for gp in gp_model_names]
+    sort_args = np.argsort(sort_keys)
+    gp_model_names = np.array(gp_model_names)[sort_args]
+
+    return gp_model_names
+
+
 def main():
     """
     Run Gaussian Process and traditional Sobol sensitivity analyses for
@@ -133,11 +143,7 @@ def main():
     n_samples_list = setup["n_samples"]
 
     # List of GP models sorted in ascending order
-    gp_model_names = os.listdir(f"output/gp_models/{gp_dir}")
-    gp_model_names.remove("setup.json")
-    sort_keys = [int(gp.split("_")[-1].split(".")[0]) for gp in gp_model_names]
-    sort_args = np.argsort(sort_keys)
-    gp_model_names = np.array(gp_model_names)[sort_args]
+    gp_model_names = list_model_names(f"output/gp_models/{gp_dir}")
 
     gp_results = []
     sal_results = []
