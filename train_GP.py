@@ -113,6 +113,7 @@ def main():
         "n_samples": n_samples_list,
         "seed": seed,
         "white_kernel": white_kernel,
+        "noise_level": noise_level,
     }
 
     # Draw unique Sobol samples for training GPs
