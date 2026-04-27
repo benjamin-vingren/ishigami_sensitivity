@@ -107,8 +107,8 @@ def GP_sensitivity_analysis(gp, problem, master_seed, n_upsamples=2**14):
     return results
 
 
-def list_model_names(gp_directory_path):
-    gp_model_names = os.listdir(f"output/gp_models/{gp_directory_path}")
+def list_model_names(gp_directory_name):
+    gp_model_names = os.listdir(f"output/gp_models/{gp_directory_name}")
     gp_model_names.remove("setup.json")
     sort_keys = [int(gp.split("_")[-1].split(".")[0]) for gp in gp_model_names]
     sort_args = np.argsort(sort_keys)
