@@ -26,7 +26,18 @@ def get_sobol_indices(order, var_index, results_dict):
         Sobol indices corresponding to the specified order and variable index
         across all result entries.
     """
-    return [res[order][var_index] for res in results_dict]
+    if order in ["S1", "ST", "S1_conf", "ST_conf"]:
+        return [res[order][var_index] for res in results_dict]
+    elif order in ["S2", "S2_conf"]:
+        if len(var_index) != 2:
+            raise ValueError(
+                "Supply the interaction to be returned ([0, 1], [0, 2] or [1, 2])."
+            )
+        return [
+            np.array(res[order])[var_index[0], var_index[1]] for res in results_dict
+        ]
+    else:
+        raise ValueError(f"Unknown option {order}.")
 
 
 def analytical_solution(a, b, print_to_consol=False):

@@ -5,7 +5,7 @@ import joblib
 from ishigami_sensitivity import list_model_names
 import matplotlib.pyplot as plt
 import numpy as np
-
+import time
 
 # def GP_resampling_analysis(
 #     samples, f, f_std, problem, master_seed, n_upsamples=2**14, n_reruns=10
@@ -176,15 +176,16 @@ def main(gp_dir, n_gp_samples, n_sens_samples):
 
     # Perform sensitivity analysis by sampling GP functions
     for model_name in model_names:
+        t0 = time.time()
         resampled_sensitivity_analysis(
             gp_dir=gp_dir,
             gp_model_name=model_name,
             n_gp_samples=n_gp_samples,
             n_sens_samples=n_sens_samples,
         )
+        print(f"Time for {model_name}: {time.time() - t0:.2f} s")
 
 
 if __name__ == "__main__":
     # Run main
-    # main(gp_dir="noisy_ishigami", n_gp_samples=2000, n_sens_samples=4096)
-    main(gp_dir="noiseless_ishigami", n_gp_samples=500, n_sens_samples=2**14)
+    main(gp_dir="noisy_ishigami", n_gp_samples=2000, n_sens_samples=2**14)

@@ -1,13 +1,14 @@
+# %%
 import numpy as np
 import utilities.read_write as rw
 import utilities.plot_utils as pu
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from ishigami_sensitivity import list_model_names
-from plot_ishigami_sensitivity import analytical_solution
+from plot_ishigami_sensitivity import analytical_solution, get_sobol_indices
 
 
-def plot_quantiles(quantiles_list, n_samples):
+def plot_quantiles(quantiles_list, n_samples, standard_solution):
     """
     Plot KDE-based median and quantiles as function of number of samples.
 
@@ -47,6 +48,46 @@ def plot_quantiles(quantiles_list, n_samples):
         "ST2": total_order[1],
         "ST3": total_order[2],
     }
+
+    standard_solution_dict = {
+        "S1": [
+            get_sobol_indices("S1", 0, standard_solution),
+            get_sobol_indices("S1_conf", 0, standard_solution),
+        ],
+        "S2": [
+            get_sobol_indices("S1", 1, standard_solution),
+            get_sobol_indices("S1_conf", 1, standard_solution),
+        ],
+        "S3": [
+            get_sobol_indices("S1", 2, standard_solution),
+            get_sobol_indices("S1_conf", 2, standard_solution),
+        ],
+        "ST1": [
+            get_sobol_indices("ST", 0, standard_solution),
+            get_sobol_indices("ST_conf", 0, standard_solution),
+        ],
+        "ST2": [
+            get_sobol_indices("ST", 1, standard_solution),
+            get_sobol_indices("ST_conf", 1, standard_solution),
+        ],
+        "ST3": [
+            get_sobol_indices("ST", 2, standard_solution),
+            get_sobol_indices("ST_conf", 2, standard_solution),
+        ],
+        "S12": [
+            get_sobol_indices("S2", [0, 1], standard_solution),
+            get_sobol_indices("S2_conf", [0, 1], standard_solution),
+        ],
+        "S13": [
+            get_sobol_indices("S2", [0, 2], standard_solution),
+            get_sobol_indices("S2_conf", [0, 2], standard_solution),
+        ],
+        "S23": [
+            get_sobol_indices("S2", [1, 2], standard_solution),
+            get_sobol_indices("S2_conf", [1, 2], standard_solution),
+        ],
+    }
+
     for key in keys:
         q_low = []
         q_med = []
@@ -69,7 +110,7 @@ def plot_quantiles(quantiles_list, n_samples):
         plt.errorbar(
             n_samples,
             q_med,
-            yerr=[q_med - q_low, q_high - q_low],
+            yerr=[q_med - q_low, q_high - q_med],
             linestyle="None",
             marker=".",
             label="GP predicted solution",
@@ -79,9 +120,21 @@ def plot_quantiles(quantiles_list, n_samples):
         # Analytical solution
         plt.gca().axhline(analytical_solution_dict[key], linestyle="--", color="k")
 
+        # Standard solution
+        plt.errorbar(
+            n_samples,
+            standard_solution_dict[key][0],
+            yerr=standard_solution_dict[key][1],
+            linestyle="None",
+            marker=".",
+            label="Standard solution",
+            color="C1",
+        )
+
         plt.xlabel("Number of samples")
         plt.ylabel(key_to_label[key])
         plt.xscale("log")
+        plt.xlim(1e2, 1e4)
 
         plt.legend(
             facecolor="lightgray",
@@ -198,9 +251,12 @@ def main(sens_dir):
 
     # Plot sensitivity indices as a function of number of samples
     setup = rw.json_read_dictionary(f"output/gp_models/{sens_dir}/setup.json")
-    plot_quantiles(quantiles, setup["n_samples"])
+    standard_solution = rw.json_read_dictionary(
+        f"output/sensitivity_analyses/{sens_dir}.json"
+    )
+    plot_quantiles(quantiles, setup["n_samples"], standard_solution["sal_results"])
 
 
 if __name__ == "__main__":
-    main("noiseless_ishigami")
-    print("hi")
+    main("noisless_ishigami")
+    input("Press Enter to exit...")
