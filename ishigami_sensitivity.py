@@ -96,7 +96,7 @@ def GP_sensitivity_analysis(gp, problem, master_seed, n_upsamples=2**14):
     sens_samples = SobolSample(problem, n_upsamples, seed=master_seed)
 
     print("Predicting GP samples.")
-    y_pred, y_std = gp.predict(sens_samples, return_std=True)
+    y_pred = gp.predict(sens_samples, return_std=False)
 
     # Perform sensitivity analysis on GP prediction
     print("Performing GP Sobol sensitivity analysis.")
@@ -117,7 +117,7 @@ def list_model_names(gp_directory_name):
     return gp_model_names
 
 
-def main():
+def main(gp_dir):
     """
     Run Gaussian Process and traditional Sobol sensitivity analyses for
     multiple sample sizes using the Ishigami function.
@@ -138,12 +138,13 @@ def main():
     seeds : ndarray
         Random seeds used in the GP sensitivity analyses.
     """
-    gp_dir = "noiseless_ishigami"
     setup = rw.json_read_dictionary(f"output/gp_models/{gp_dir}/setup.json")
+    seed = setup["seed"]
     n_samples_list = setup["n_samples"]
+    noise_level = setup["noise_level"]
 
     # List of GP models sorted in ascending order
-    gp_model_names = list_model_names(f"output/gp_models/{gp_dir}")
+    gp_model_names = list_model_names(gp_dir)
 
     gp_results = []
     sal_results = []
@@ -151,7 +152,7 @@ def main():
         gp_model_dict = joblib.load(f"output/gp_models/{gp_dir}/{gp_model_name}")
         gp_samples = gp_model_dict["samples"]
         gp_model = gp_model_dict["gp"]
-        seed = setup["seed"]
+
         gp_result = GP_sensitivity_analysis(gp_model, setup, seed)
 
         # Draw samples for traditional sensitivity analysis
@@ -165,7 +166,9 @@ def main():
             f"x{i + 1}": sal_sample for i, sal_sample in enumerate(sal_samples.T)
         }
 
-        f_sal, f_sal_std = draw_from_ishigami(sal_samples, noise_level=0.01, seed=seed)
+        f_sal, f_sal_std = draw_from_ishigami(
+            sal_samples, noise_level=noise_level, seed=seed
+        )
 
         print("Performing traditional Sobol sensitivity analysis.")
         sal_result = analyze(setup, f_sal)
@@ -178,7 +181,8 @@ def main():
 
 
 if __name__ == "__main__":
-    gp_results, sal_results, n_samples = main()
+    run_name = "noiseless_ishigami"
+    gp_results, sal_results, n_samples = main(run_name)
 
     to_save = {
         "gp_results": gp_results,
@@ -186,4 +190,4 @@ if __name__ == "__main__":
         "n_samples": n_samples,
     }
 
-    rw.json_write_dictionary("noiseless_ishigami.json", to_save)
+    rw.json_write_dictionary(f"output/sensitivity_analyses/{run_name}.json", to_save)
