@@ -236,16 +236,18 @@ def plot_histograms(sens_dict, bins=30):
     return quantiles
 
 
-def main(sens_dir):
-    pu.set_nes_plot_style(large_font=True)
+def main(sens_dir, samples_dir):
+    pu.set_nes_plot_style()
     sens_models = list_model_names(sens_dir)
     sens_models = [sens_model.replace(".joblib", ".json") for sens_model in sens_models]
     quantiles = []
     for sens_model in sens_models:
         # Read sensitivity indices
-        sens_dict = rw.json_read_dictionary(
-            f"output/sensitivity_analyses/sampled_gp_functions/{sens_dir}/{sens_model}"
+        model_path = (
+            "output/sensitivity_analyses/sampled_gp_functions/"
+            f"{sens_dir}/{samples_dir}/{sens_model}"
         )
+        sens_dict = rw.json_read_dictionary(model_path)
 
         quantiles.append(plot_histograms(sens_dict))
 
@@ -258,5 +260,5 @@ def main(sens_dir):
 
 
 if __name__ == "__main__":
-    main("noisless_ishigami")
+    main("noiseless_ishigami", "n_32768")
     input("Press Enter to exit...")
