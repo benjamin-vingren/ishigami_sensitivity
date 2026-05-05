@@ -40,7 +40,7 @@ def get_sobol_indices(order, var_index, results_dict):
         raise ValueError(f"Unknown option {order}.")
 
 
-def analytical_solution(a, b, print_to_consol=False):
+def analytical_solution(a, b, print_to_consol=False, return_dict=False):
     """
     Compute analytical Sobol indices for the Ishigami function.
 
@@ -111,6 +111,20 @@ def analytical_solution(a, b, print_to_consol=False):
         print(f"S12: {S12}")
         print(f"S13: {S13}")
         print(f"S23: {S23}")
+
+    if return_dict:
+        analytical_solution_dict = {
+            "S1": S1,
+            "S2": S2,
+            "S3": S3,
+            "S12": S12,
+            "S13": S13,
+            "S23": S23,
+            "ST1": ST1,
+            "ST2": ST2,
+            "ST3": ST3,
+        }
+        return analytical_solution_dict
 
     return (S1, S2, S3), (S12, S13, S23), (ST1, ST2, ST3)
 
