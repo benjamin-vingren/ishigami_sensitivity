@@ -99,22 +99,23 @@ def train_GP(
 
 def main():
     n_samples_list = [2**i for i in range(7, 14)]
-    seed = 12572601
-    noise_level = 0.01
+    seed = 68521736
+    noise_level = 0.5
     white_kernel = False
-    gp_dir = "output/gp_models/noiseless_ishigami"
-    gp_name = "noiseless_ishigami"
+    gp_name = "noisy_ishigami"
+    gp_dir = f"output/gp_models/{gp_name}"
 
     # Salib problem
-    problem = {
+    setup = {
         "num_vars": 3,
         "names": ["x1", "x2", "x3"],
         "bounds": [[-np.pi, np.pi], [-np.pi, np.pi], [-np.pi, np.pi]],
         "n_samples": n_samples_list,
         "seed": seed,
-        "white_kernel": white_kernel,
         "noise_level": noise_level,
     }
+    rw.json_write_dictionary(f"{gp_dir}/setup.json", setup)
+    gp_output = {"white_kernel": white_kernel}
 
     # Draw unique Sobol samples for training GPs
     bounds = {f"x{i}": [-np.pi, np.pi] for i in range(1, 4)}
@@ -127,8 +128,8 @@ def main():
         gp_samples = np.array([samples["x1"], samples["x2"], samples["x3"]]).T
         gp = train_GP(1, 1, f_gp_std, gp_samples, f_gp, white_kernel=white_kernel)
 
-        problem["samples"] = gp_samples
-        problem["gp"] = gp
+        gp_output["samples"] = gp_samples
+        gp_output["gp"] = gp
 
         fn = f"{gp_dir}/{gp_name}_{i}.joblib"
 
@@ -137,7 +138,7 @@ def main():
             if "y" not in inp.lower():
                 continue
 
-        joblib.dump(problem, fn)
+        joblib.dump(gp_output, fn)
         print(f"Wrote {fn}")
 
 
