@@ -35,19 +35,7 @@ def plot_quantiles(quantiles_list, n_samples, standard_solution):
     }
 
     # Analytical solution to Sobol indices
-    first_order, second_order, total_order = analytical_solution(7, 0.1)
-
-    analytical_solution_dict = {
-        "S1": first_order[0],
-        "S2": first_order[1],
-        "S3": first_order[2],
-        "S12": second_order[0],
-        "S13": second_order[1],
-        "S23": second_order[2],
-        "ST1": total_order[0],
-        "ST2": total_order[1],
-        "ST3": total_order[2],
-    }
+    analytical_solution_dict = analytical_solution(7, 0.1, return_dict=True)
 
     standard_solution_dict = {
         "S1": [
@@ -106,17 +94,6 @@ def plot_quantiles(quantiles_list, n_samples, standard_solution):
         plt.figure(f"{key} vs samples")
         plt.title(f"{key} vs number of samples", loc="left")
 
-        # Probabilistic solution
-        plt.errorbar(
-            n_samples,
-            q_med,
-            yerr=[q_med - q_low, q_high - q_med],
-            linestyle="None",
-            marker=".",
-            label="GP predicted solution",
-            color="C0",
-        )
-
         # Analytical solution
         plt.gca().axhline(analytical_solution_dict[key], linestyle="--", color="k")
 
@@ -129,6 +106,17 @@ def plot_quantiles(quantiles_list, n_samples, standard_solution):
             marker=".",
             label="Standard solution",
             color="C1",
+        )
+
+        # Probabilistic solution
+        plt.errorbar(
+            n_samples,
+            q_med,
+            yerr=[q_med - q_low, q_high - q_med],
+            linestyle="None",
+            marker=".",
+            label="GP predicted solution",
+            color="C0",
         )
 
         plt.xlabel("Number of samples")
@@ -157,7 +145,7 @@ def kde_quantiles(data, q=[0.025, 0.5, 0.975]):
     return x, pdf, [np.interp(qi, cdf, x) for qi in q]
 
 
-def plot_hist_with_kde(ax, data, label, bins):
+def plot_hist_with_kde(ax, data, label, bins, true_value):
     counts, bin_edges, _ = ax.hist(data, bins=bins, alpha=0.6)
 
     # KDE + quantiles
@@ -166,11 +154,12 @@ def plot_hist_with_kde(ax, data, label, bins):
     bin_width = bin_edges[1] - bin_edges[0]
     kde_scaled = pdf * len(data) * bin_width
 
-    ax.plot(x, kde_scaled)
+    ax.plot(x, kde_scaled, label="KDE")
 
     # Vertical lines
     for q in [q_low, q_med, q_high]:
         ax.axvline(q, linestyle="--", color="black")
+    ax.axvline(true_value, linestyle="-", color="red", label="True value")
 
     # Format title
     upper = q_high - q_med
@@ -179,7 +168,20 @@ def plot_hist_with_kde(ax, data, label, bins):
     title = rf"{label} = {q_med:.2f}" rf"$^{{+{upper:.2f}}}_{{-{lower:.2f}}}$"
     ax.set_title(title, loc="left")
 
+    # Round xlim to closest 0.05 s.t. xlim > 0.2
+    if (
+        np.abs(np.diff(ax.get_xlim())) < 0.2
+        and np.abs(np.diff([true_value, q_med])) < 0.15
+    ):
+        ax.set_xlim(
+            np.round((q_med - 0.1) * 20) / 20, np.round((q_med + 0.1) * 20) / 20
+        )
+    else:
+        ax.set_xlim(
+            np.round(ax.get_xlim()[0] * 20) / 20, np.round(ax.get_xlim()[1] * 20) / 20
+        )
     ax.set_xlabel(label)
+    ax.ticklabel_format(style="plain")
     ax.set_ylabel("Frequency")
 
     return (q_low, q_med, q_high)
@@ -196,6 +198,9 @@ def plot_histograms(sens_dict, bins=30):
 
     fig, axes = plt.subplots(3, 3, figsize=(12, 10))
 
+    # Analytical solution to Sobol indices
+    analytical_solution_dict = analytical_solution(7, 0.1, return_dict=True)
+
     # First-order
     quantiles = {}
     for i in range(3):
@@ -206,7 +211,9 @@ def plot_histograms(sens_dict, bins=30):
             .replace("_", "")
             .replace("$", "")
         )
-        quantiles[key] = plot_hist_with_kde(axes[0, i], S1[:, i], s1_labels[i], bins)
+        quantiles[key] = plot_hist_with_kde(
+            axes[0, i], S1[:, i], s1_labels[i], bins, analytical_solution_dict[key]
+        )
 
     # Total-order
     for i in range(3):
@@ -217,7 +224,9 @@ def plot_histograms(sens_dict, bins=30):
             .replace("_", "")
             .replace("$", "")
         )
-        quantiles[key] = plot_hist_with_kde(axes[1, i], ST[:, i], st_labels[i], bins)
+        quantiles[key] = plot_hist_with_kde(
+            axes[1, i], ST[:, i], st_labels[i], bins, analytical_solution_dict[key]
+        )
 
     # Second-order
     for i in range(3):
@@ -228,7 +237,9 @@ def plot_histograms(sens_dict, bins=30):
             .replace("_", "")
             .replace("$", "")
         )
-        quantiles[key] = plot_hist_with_kde(axes[2, i], S2[:, i], s2_labels[i], bins)
+        quantiles[key] = plot_hist_with_kde(
+            axes[2, i], S2[:, i], s2_labels[i], bins, analytical_solution_dict[key]
+        )
 
     plt.tight_layout()
     plt.show()
@@ -260,5 +271,5 @@ def main(sens_dir, samples_dir):
 
 
 if __name__ == "__main__":
-    main("noiseless_ishigami", "n_32768")
+    main("noisy_ishigami", "n_32768")
     input("Press Enter to exit...")
