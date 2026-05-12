@@ -145,7 +145,7 @@ def kde_quantiles(data, q=[0.025, 0.5, 0.975]):
     return x, pdf, [np.interp(qi, cdf, x) for qi in q]
 
 
-def plot_hist_with_kde(ax, data, label, bins, true_value):
+def plot_hist_with_kde(ax, data, label, bins, true_value, xlim=None):
     counts, bin_edges, _ = ax.hist(data, bins=bins, alpha=0.6)
 
     # KDE + quantiles
@@ -168,8 +168,10 @@ def plot_hist_with_kde(ax, data, label, bins, true_value):
     title = rf"{label} = {q_med:.2f}" rf"$^{{+{upper:.2f}}}_{{-{lower:.2f}}}$"
     ax.set_title(title, loc="left")
 
+    if xlim:
+        ax.set_xlim(xlim[0], xlim[1])
     # Round xlim to closest 0.05 s.t. xlim > 0.2
-    if (
+    elif (
         np.abs(np.diff(ax.get_xlim())) < 0.2
         and np.abs(np.diff([true_value, q_med])) < 0.15
     ):
@@ -185,6 +187,161 @@ def plot_hist_with_kde(ax, data, label, bins, true_value):
     ax.set_ylabel("Frequency")
 
     return (q_low, q_med, q_high)
+
+
+def plot_histograms_by_index(
+    sens_dicts,
+    quantiles_list,
+    n_samples,
+    standard_solution,
+    bins=30,
+):
+    """
+    4x2 layout:
+    - 7 histogram panels (one per sample size)
+    - 1 quantile panel (bottom-right)
+    """
+
+    index_info = {
+        "S1": ("S1", 0, r"$S_1$", [0.25, 0.40]),
+        "S2": ("S1", 1, r"$S_2$", [0.20, 0.60]),
+        "S3": ("S1", 2, r"$S_3$", [-0.10, 0.10]),
+        "ST1": ("ST", 0, r"$S_{T_1}$", [0.35, 0.75]),
+        "ST2": ("ST", 1, r"$S_{T_2}$", [0.30, 0.60]),
+        "ST3": ("ST", 2, r"$S_{T_3}$", [0.05, 0.45]),
+        "S12": ("S2", 0, r"$S_{12}$", [-0.10, 0.10]),
+        "S13": ("S2", 1, r"$S_{13}$", [0.10, 0.35]),
+        "S23": ("S2", 2, r"$S_{23}$", [-0.10, 0.10]),
+    }
+
+    analytical_solution_dict = analytical_solution(7, 0.1, return_dict=True)
+
+    # --- standard solution (same as plot_quantiles) ---
+    standard_solution_dict = {
+        "S1": [
+            get_sobol_indices("S1", 0, standard_solution),
+            get_sobol_indices("S1_conf", 0, standard_solution),
+        ],
+        "S2": [
+            get_sobol_indices("S1", 1, standard_solution),
+            get_sobol_indices("S1_conf", 1, standard_solution),
+        ],
+        "S3": [
+            get_sobol_indices("S1", 2, standard_solution),
+            get_sobol_indices("S1_conf", 2, standard_solution),
+        ],
+        "ST1": [
+            get_sobol_indices("ST", 0, standard_solution),
+            get_sobol_indices("ST_conf", 0, standard_solution),
+        ],
+        "ST2": [
+            get_sobol_indices("ST", 1, standard_solution),
+            get_sobol_indices("ST_conf", 1, standard_solution),
+        ],
+        "ST3": [
+            get_sobol_indices("ST", 2, standard_solution),
+            get_sobol_indices("ST_conf", 2, standard_solution),
+        ],
+        "S12": [
+            get_sobol_indices("S2", [0, 1], standard_solution),
+            get_sobol_indices("S2_conf", [0, 1], standard_solution),
+        ],
+        "S13": [
+            get_sobol_indices("S2", [0, 2], standard_solution),
+            get_sobol_indices("S2_conf", [0, 2], standard_solution),
+        ],
+        "S23": [
+            get_sobol_indices("S2", [1, 2], standard_solution),
+            get_sobol_indices("S2_conf", [1, 2], standard_solution),
+        ],
+    }
+
+    for key, (array_name, idx, label, xlim) in index_info.items():
+
+        fig, axes = plt.subplots(4, 2, figsize=(9, 15))
+        axes = axes.flatten()
+
+        # --- Histogram panels ---
+        for i, sens_dict in enumerate(sens_dicts):
+            ax = axes[i]
+
+            data = np.array(sens_dict[array_name])[:, idx]
+
+            q_low, q_med, q_high = plot_hist_with_kde(
+                ax, data, label, bins, analytical_solution_dict[key], xlim=xlim
+            )
+
+            # Remove default title
+            ax.set_title("")
+
+            # Build right-side Sobol text
+            upper = q_high - q_med
+            lower = q_med - q_low
+            sobol_text = rf"{key} = {q_med:.2f}$^{{+{upper:.2f}}}_{{-{lower:.2f}}}$"
+
+            # Left title (N)
+            ax.set_title(f"N = {n_samples[i]}", loc="left")
+
+            # Right title (Sobol value)
+            ax.set_title(sobol_text, loc="right")
+
+        # --- Quantile panel ---
+        ax_q = axes[-1]
+
+        q_low, q_med, q_high = [], [], []
+
+        for qdict in quantiles_list:
+            low, med, high = qdict[key]
+            q_low.append(low)
+            q_med.append(med)
+            q_high.append(high)
+
+        q_low = np.array(q_low)
+        q_med = np.array(q_med)
+        q_high = np.array(q_high)
+
+        # Analytical line
+        ax_q.axhline(analytical_solution_dict[key], linestyle="--", color="k")
+
+        # Standard solution
+        ax_q.errorbar(
+            n_samples,
+            standard_solution_dict[key][0],
+            yerr=standard_solution_dict[key][1],
+            linestyle="None",
+            marker=".",
+            color="C1",
+            label="Standard solution",
+        )
+
+        # GP solution
+        ax_q.errorbar(
+            n_samples,
+            q_med,
+            yerr=[q_med - q_low, q_high - q_med],
+            linestyle="None",
+            marker=".",
+            color="C0",
+            label="GP predicted solution",
+        )
+
+        ax_q.set_xscale("log")
+        ax_q.set_xlabel("Number of samples")
+        ax_q.set_ylabel(label)
+
+        # Match plot_quantiles styling
+        ax_q.legend(
+            facecolor="lightgray",
+            edgecolor="black",
+            framealpha=0.3,
+            frameon=True,
+        )
+
+        ax_q.set_title("Quantiles vs samples", loc="left")
+
+        fig.suptitle(f"{key}", fontsize=14)
+        plt.tight_layout()
+        plt.show()
 
 
 def plot_histograms(sens_dict, bins=30):
@@ -267,6 +424,33 @@ def main(sens_dir, samples_dir):
     standard_solution = rw.json_read_dictionary(
         f"output/sensitivity_analyses/{sens_dir}.json"
     )
+
+    sens_dicts = []
+    quantiles = []
+
+    for sens_model in sens_models:
+        model_path = (
+            "output/sensitivity_analyses/sampled_gp_functions/"
+            f"{sens_dir}/{samples_dir}/{sens_model}"
+        )
+        sens_dict = rw.json_read_dictionary(model_path)
+
+        sens_dicts.append(sens_dict)
+        quantiles.append(plot_histograms(sens_dict))  # keep this
+
+    setup = rw.json_read_dictionary(f"output/gp_models/{sens_dir}/setup.json")
+    standard_solution = rw.json_read_dictionary(
+        f"output/sensitivity_analyses/{sens_dir}.json"
+    )
+
+    plot_histograms_by_index(
+        sens_dicts,
+        quantiles,
+        setup["n_samples"],
+        standard_solution["sal_results"],
+    )
+    # STOP
+
     plot_quantiles(quantiles, setup["n_samples"], standard_solution["sal_results"])
 
 
