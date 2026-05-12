@@ -12,7 +12,42 @@ from itertools import batched
 def resampled_sensitivity_analysis(
     gp_dir, gp_model_name, n_gp_samples, n_sens_samples, batch_size=2**10
 ):
-    """ """
+    """
+    Perform a resampled Sobol sensitivity analysis by sampling from a Gaussian
+    Process (GP) model.
+
+    This function loads a pre-trained GP model, generates multiple realizations
+    of the GP function using Sobol sequences, and calculates the first-order
+    (S1), second-order (S2), and total-effect (ST) Sobol indices for each
+    realization. The results are then saved as a JSON file.
+
+    Parameters
+    ----------
+    gp_dir : str
+        The directory path where the GP model and setup files are located
+        within the 'output/gp_models/' folder.
+    gp_model_name : str
+        The filename of the loaded GP model (e.g., 'model.joblib').
+    n_gp_samples : int
+        The number of GP function realizations to sample for the analysis.
+    n_sens_samples : int
+        The number of Sobol samples to use for the sensitivity analysis.
+        Must be a multiple of 8.
+    batch_size : int, optional
+        The number of samples to process at once when predicting GP
+        function values to manage memory usage. Default is 1024 (2**10).
+
+    Raises
+    ------
+    ValueError
+        If `n_sens_samples` is not divisible by 8.
+
+    Returns
+    -------
+    None
+        The function saves the resulting Sobol indices to a JSON file in
+        'output/sensitivity_analyses/sampled_gp_functions/'.
+    """
     setup = rw.json_read_dictionary(f"output/gp_models/{gp_dir}/setup.json")
 
     # Load GP model
