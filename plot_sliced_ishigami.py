@@ -26,9 +26,10 @@ def plot_sliced_ishigami(samples, y, x3_labels, normalize=True, fig_title=None):
         Labels representing the fixed values of x3 used for each slice.
         These are displayed in the subplot titles.
 
-    normalize : bool, optional (default=True)
+    normalize : bool, array, optional (default=True)
         If True, uses analytically derived bounds of the Ishigami function
-        to fix the color scale across all plots. If False, the color scale
+        to fix the color scale across all plots. If not True and not False assumes vmin
+        and vmax are given as an input array (vmin, vmax). If False, the color scale
         is computed from the minimum and maximum of `y`.
 
     Returns
@@ -49,10 +50,12 @@ def plot_sliced_ishigami(samples, y, x3_labels, normalize=True, fig_title=None):
     axes = axes.flatten()
 
     # Analytical min/max
-    if normalize:
+    if normalize is True:
         vmin = -1 - (np.pi**4) / 10
         vmax = 8 + (np.pi**4) / 10
-
+    elif normalize:
+        vmin = normalize[0]
+        vmax = normalize[1]
     else:
         vmin = y.min()
         vmax = y.max()
@@ -138,13 +141,19 @@ def main(gp_dir, gp_names):
     # Plot true
     plot_sliced_ishigami(samples, y_true, x3_labels, fig_title="True Ishigami function")
 
-    # Plot residuals
+    # Plot deviation
+    vmin = np.inf
+    vmax = -np.inf
+    for name in gp_names:
+        vmin = np.min([vmin, (y_preds[name] - y_true).min()])
+        vmax = np.max([vmax, (y_preds[name] - y_true).max()])
+
     for name in gp_names:
         plot_sliced_ishigami(
             samples,
-            np.abs(y_preds[name] - y_true),
+            y_preds[name] - y_true,
             x3_labels,
-            normalize=False,
+            normalize=(vmin, vmax),
         )
 
     input("Press Enter to exit...")
