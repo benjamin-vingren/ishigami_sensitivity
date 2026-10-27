@@ -1,12 +1,13 @@
+import os
+
+import joblib
+import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import ConstantKernel, RBF, WhiteKernel
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from utilities import read_write as rw
 from utilities import samplers
-import numpy as np
+
 from ishigami_sensitivity import draw_from_ishigami
-import joblib
-import os
-import argparse
 
 
 def train_GP(
@@ -64,10 +65,8 @@ def train_GP(
 
     if white_kernel:
         print(
-            (
-                "Estimating GP standard deviation from "
-                "variance in data using a white kernel."
-            )
+            "Estimating GP standard deviation from "
+            "variance in data using a white kernel."
         )
         kernel = ConstantKernel(
             constant_value=sigma_f, constant_value_bounds=constant_value_bounds
@@ -99,10 +98,10 @@ def train_GP(
 
 def main():
     n_samples_list = [2**i for i in range(7, 14)]
-    seed = 68521736
-    noise_level = 0.5
+    seed = 12572601
+    noise_level = 0.01
     white_kernel = False
-    gp_name = "noisy_ishigami"
+    gp_name = "noiseless_ishigami"
     gp_dir = f"output/gp_models/{gp_name}"
 
     # Salib problem

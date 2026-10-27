@@ -2,8 +2,8 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import utilities.read_write as rw
 import utilities.plot_utils as pu
+import utilities.read_write as rw
 
 
 def get_sobol_indices(order, var_index, results_dict):
@@ -91,7 +91,7 @@ def analytical_solution(a, b, print_to_consol=False, return_dict=False):
     ST3 = (V3 + V13 + V23) / V  # (= S13)
 
     if print_to_consol:
-        print("")
+        print()
         print("Analytical Sobol indices:")
         print("-------------------------")
         print("Total")
@@ -151,8 +151,8 @@ def plot_total_indices(results):
         ST_sal = get_sobol_indices("ST", i, results["sal_results"])
         ST_sal_std = get_sobol_indices("ST_conf", i, results["sal_results"])
 
-        plt.figure(f"Total indices x{i+1}")
-        plt.title(f"Total effect index $x_{i+1}$", loc="left")
+        plt.figure(f"Total indices x{i + 1}")
+        plt.title(f"Total effect index $x_{i + 1}$", loc="left")
 
         # Salib standard solution
         plt.errorbar(
@@ -181,7 +181,7 @@ def plot_total_indices(results):
 
         plt.axhline(total[i], color="k", linestyle="--", label="Analytical solution")
         plt.xlabel("Number of samples")
-        plt.ylabel(f"$S_{{T_{i+1}}}$")
+        plt.ylabel(f"$S_{{T_{i + 1}}}$")
         plt.legend(
             facecolor="lightgray", edgecolor="black", framealpha=0.3, frameon=True
         )
@@ -211,8 +211,8 @@ def plot_first_indices(results):
         S1_sal = get_sobol_indices("S1", i, results["sal_results"])
         S1_sal_std = get_sobol_indices("S1_conf", i, results["sal_results"])
 
-        plt.figure(f"First order effect x{i+1}")
-        plt.title(f"First order effect index $x_{i+1}$", loc="left")
+        plt.figure(f"First order effect x{i + 1}")
+        plt.title(f"First order effect index $x_{i + 1}$", loc="left")
 
         # Salib standard solution
         plt.errorbar(
@@ -243,7 +243,7 @@ def plot_first_indices(results):
             first_order[i], color="k", linestyle="--", label="Analytical solution"
         )
         plt.xlabel("Number of samples")
-        plt.ylabel(f"$S_{i+1}$")
+        plt.ylabel(f"$S_{i + 1}$")
         plt.legend(
             facecolor="lightgray", edgecolor="black", framealpha=0.3, frameon=True
         )
@@ -360,3 +360,4 @@ if __name__ == "__main__":
     pu.set_nes_plot_style()
     # main('output/multirun_ishigami.json')
     main("output/sensitivity_analyses/noiseless_ishigami.json")
+    input("Enter to exit...")
