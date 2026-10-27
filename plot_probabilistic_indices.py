@@ -1,11 +1,16 @@
 # %%
-import numpy as np
-import utilities.read_write as rw
-import utilities.plot_utils as pu
 import matplotlib.pyplot as plt
+import numpy as np
+import utilities.plot_utils as pu
+import utilities.read_write as rw
 from scipy.stats import gaussian_kde
+
 from ishigami_sensitivity import list_model_names
 from plot_ishigami_sensitivity import analytical_solution, get_sobol_indices
+from utilities import translations as tr
+
+# Language of all plot text: "en" (English) or "sv" (Swedish)
+LANGUAGE = "en"
 
 
 def plot_quantiles(quantiles_list, n_samples, standard_solution):
@@ -91,8 +96,8 @@ def plot_quantiles(quantiles_list, n_samples, standard_solution):
         q_med = np.array(q_med)
         q_high = np.array(q_high)
 
-        plt.figure(f"{key} vs samples")
-        plt.title(f"{key} vs number of samples", loc="left")
+        plt.figure(tr.t("fig_vs_samples", key=key))
+        plt.title(tr.t("title_vs_n_samples", key=key), loc="left")
 
         # Analytical solution
         plt.gca().axhline(analytical_solution_dict[key], linestyle="--", color="k")
@@ -104,7 +109,7 @@ def plot_quantiles(quantiles_list, n_samples, standard_solution):
             yerr=standard_solution_dict[key][1],
             linestyle="None",
             marker=".",
-            label="Standard solution",
+            label=tr.t("standard_solution"),
             color="C1",
         )
 
@@ -115,14 +120,15 @@ def plot_quantiles(quantiles_list, n_samples, standard_solution):
             yerr=[q_med - q_low, q_high - q_med],
             linestyle="None",
             marker=".",
-            label="GP predicted solution",
+            label=tr.t("gp_solution"),
             color="C0",
         )
 
-        plt.xlabel("Number of samples")
+        plt.xlabel(tr.t("n_samples"))
         plt.ylabel(key_to_label[key])
         plt.xscale("log")
         plt.xlim(1e2, 1e4)
+        tr.localize_axis(plt.gca(), axis="y")
 
         plt.legend(
             facecolor="lightgray",
@@ -154,18 +160,21 @@ def plot_hist_with_kde(ax, data, label, bins, true_value, xlim=None):
     bin_width = bin_edges[1] - bin_edges[0]
     kde_scaled = pdf * len(data) * bin_width
 
-    ax.plot(x, kde_scaled, label="KDE")
+    ax.plot(x, kde_scaled, label=tr.t("kde"))
 
     # Vertical lines
     for q in [q_low, q_med, q_high]:
         ax.axvline(q, linestyle="--", color="black")
-    ax.axvline(true_value, linestyle="-", color="red", label="True value")
+    ax.axvline(true_value, linestyle="-", color="red", label=tr.t("true_value"))
 
     # Format title
     upper = q_high - q_med
     lower = q_med - q_low
 
-    title = rf"{label} = {q_med:.2f}" rf"$^{{+{upper:.2f}}}_{{-{lower:.2f}}}$"
+    title = (
+        rf"{label} = {tr.fmt(q_med)}"
+        rf"$^{{+{tr.fmt(upper, math=True)}}}_{{-{tr.fmt(lower, math=True)}}}$"
+    )
     ax.set_title(title, loc="left")
 
     if xlim:
@@ -184,7 +193,8 @@ def plot_hist_with_kde(ax, data, label, bins, true_value, xlim=None):
         )
     ax.set_xlabel(label)
     ax.ticklabel_format(style="plain")
-    ax.set_ylabel("Frequency")
+    ax.set_ylabel(tr.t("frequency"))
+    tr.localize_axis(ax)
 
     return (q_low, q_med, q_high)
 
@@ -257,7 +267,6 @@ def plot_histograms_by_index(
     }
 
     for key, (array_name, idx, label, xlim) in index_info.items():
-
         fig, axes = plt.subplots(4, 2, figsize=(9, 15))
         axes = axes.flatten()
 
@@ -277,10 +286,13 @@ def plot_histograms_by_index(
             # Build right-side Sobol text
             upper = q_high - q_med
             lower = q_med - q_low
-            sobol_text = rf"{key} = {q_med:.2f}$^{{+{upper:.2f}}}_{{-{lower:.2f}}}$"
+            sobol_text = (
+                rf"{key} = {tr.fmt(q_med)}"
+                rf"$^{{+{tr.fmt(upper, math=True)}}}_{{-{tr.fmt(lower, math=True)}}}$"
+            )
 
             # Left title (N)
-            ax.set_title(f"N = {n_samples[i]}", loc="left")
+            ax.set_title(tr.t("n_equals", n=n_samples[i]), loc="left")
 
             # Right title (Sobol value)
             ax.set_title(sobol_text, loc="right")
@@ -311,7 +323,7 @@ def plot_histograms_by_index(
             linestyle="None",
             marker=".",
             color="C1",
-            label="Standard solution",
+            label=tr.t("standard_solution"),
         )
 
         # GP solution
@@ -322,12 +334,13 @@ def plot_histograms_by_index(
             linestyle="None",
             marker=".",
             color="C0",
-            label="GP predicted solution",
+            label=tr.t("gp_solution"),
         )
 
         ax_q.set_xscale("log")
-        ax_q.set_xlabel("Number of samples")
+        ax_q.set_xlabel(tr.t("n_samples"))
         ax_q.set_ylabel(label)
+        tr.localize_axis(ax_q, axis="y")
 
         # Match plot_quantiles styling
         ax_q.legend(
@@ -337,7 +350,7 @@ def plot_histograms_by_index(
             frameon=True,
         )
 
-        ax_q.set_title("Quantiles vs samples", loc="left")
+        ax_q.set_title(tr.t("quantiles_vs_samples"), loc="left")
 
         fig.suptitle(f"{key}", fontsize=14)
         plt.tight_layout()
@@ -404,7 +417,9 @@ def plot_histograms(sens_dict, bins=30):
     return quantiles
 
 
-def main(sens_dir, samples_dir):
+def main(sens_dir, samples_dir, language=LANGUAGE):
+    tr.set_language(language)
+
     pu.set_nes_plot_style()
     sens_models = list_model_names(sens_dir)
     sens_models = [sens_model.replace(".joblib", ".json") for sens_model in sens_models]
