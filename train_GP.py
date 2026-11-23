@@ -2,12 +2,11 @@ import os
 
 import joblib
 import numpy as np
+from ishigami_sensitivity import draw_from_ishigami
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
 from utilities import read_write as rw
 from utilities import samplers
-
-from ishigami_sensitivity import draw_from_ishigami
 
 
 def train_GP(
