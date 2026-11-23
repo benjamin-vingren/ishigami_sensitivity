@@ -26,10 +26,8 @@ dependencies = [
     "six==1.17.0",
     "threadpoolctl==3.7.0",
     "tzdata==2026.5",
+    "utilities",
 ]
-
-[tool.setuptools.packages.find]
-where = ["src"]
 
 [tool.ruff]
 line-length = 88
@@ -38,3 +36,6 @@ src = ["src"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 unfixable = ["F401"]
+
+[tool.uv.sources]
+utilities = { path = "../utilities", editable = true}
