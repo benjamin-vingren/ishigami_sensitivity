@@ -16,7 +16,7 @@ To add a new string: add the same key to *both* language dictionaries.
 
 from matplotlib.ticker import FuncFormatter
 
-SUPPORTED_LANGUAGES = ("en", "sv")
+SUPPORTED_LANGUAGES = ("en", "sv", "sven")
 _current_language = "en"
 
 TRANSLATIONS = {
@@ -27,13 +27,13 @@ TRANSLATIONS = {
         "kde": "KDE",
         "true_value": "True value",
         # Axis labels
-        "n_samples": "Number of samples",
+        "n_samples": "Number of observations (n)",
         "frequency": "Frequency",
         # Titles
-        "fig_vs_samples": "{key} vs samples",  # figure window name
-        "title_vs_n_samples": "{key} vs number of samples",
-        "quantiles_vs_samples": "Quantiles vs samples",
-        "n_equals": "N = {n}",
+        "fig_vs_samples": "{key} vs observations",  # figure window name
+        "title_vs_n_samples": "{key} vs number of observations",
+        "quantiles_vs_samples": "Quantiles vs observations",
+        "n_equals": "n = {n}",
     },
     "sv": {
         # Legend entries
@@ -42,13 +42,29 @@ TRANSLATIONS = {
         "kde": "KDE",
         "true_value": "Sant värde",
         # Axis labels
-        "n_samples": "Antal stickprov",
+        "n_samples": "Antal observationer (n)",
         "frequency": "Frekvens",
         # Titles
-        "fig_vs_samples": "{key} vs stickprov",  # figure window name
-        "title_vs_n_samples": "{key} som funktion av antal stickprov",
-        "quantiles_vs_samples": "Kvantiler som funktion av antal stickprov",
-        "n_equals": "N = {n}",
+        "fig_vs_samples": "{key} vs observationer",  # figure window name
+        "title_vs_n_samples": "{key} som funktion av antal observationer",
+        "quantiles_vs_samples": "Kvantiler som funktion av antal observationer",
+        "n_equals": "n = {n}",
+    },
+    "sven":  # swedish text, "." as decimal separator.
+    {
+        # Legend entries
+        "standard_solution": "Standardlösning",
+        "gp_solution": "GP-predikterad lösning",
+        "kde": "KDE",
+        "true_value": "Sant värde",
+        # Axis labels
+        "n_samples": "Antal observationer (n)",
+        "frequency": "Frekvens",
+        # Titles
+        "fig_vs_samples": "{key} vs observationer",  # figure window name
+        "title_vs_n_samples": "{key} som funktion av antal observationer",
+        "quantiles_vs_samples": "Kvantiler som funktion av antal observationer",
+        "n_equals": "n = {n}",
     },
 }
 

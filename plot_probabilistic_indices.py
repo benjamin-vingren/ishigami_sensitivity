@@ -3,14 +3,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import utilities.plot_utils as pu
 import utilities.read_write as rw
-from scipy.stats import gaussian_kde
-
 from ishigami_sensitivity import list_model_names
 from plot_ishigami_sensitivity import analytical_solution, get_sobol_indices
-from utilities import translations as tr
+from scipy.stats import gaussian_kde
+from utils import translations as tr
 
 # Language of all plot text: "en" (English) or "sv" (Swedish)
-LANGUAGE = "en"
+LANGUAGE = "sven"
 
 
 def plot_quantiles(quantiles_list, n_samples, standard_solution):
@@ -97,7 +96,7 @@ def plot_quantiles(quantiles_list, n_samples, standard_solution):
         q_high = np.array(q_high)
 
         plt.figure(tr.t("fig_vs_samples", key=key))
-        plt.title(tr.t("title_vs_n_samples", key=key), loc="left")
+        plt.title(tr.t("title_vs_n_samples", key=key_to_label[key]), loc="left")
 
         # Analytical solution
         plt.gca().axhline(analytical_solution_dict[key], linestyle="--", color="k")
@@ -287,7 +286,7 @@ def plot_histograms_by_index(
             upper = q_high - q_med
             lower = q_med - q_low
             sobol_text = (
-                rf"{key} = {tr.fmt(q_med)}"
+                rf"{index_info[key][2]} = {tr.fmt(q_med)}"
                 rf"$^{{+{tr.fmt(upper, math=True)}}}_{{-{tr.fmt(lower, math=True)}}}$"
             )
 
@@ -352,7 +351,7 @@ def plot_histograms_by_index(
 
         ax_q.set_title(tr.t("quantiles_vs_samples"), loc="left")
 
-        fig.suptitle(f"{key}", fontsize=14)
+        fig.suptitle(f"{index_info[key][2]}", fontsize=14)
         plt.tight_layout()
         plt.show()
 
@@ -417,10 +416,10 @@ def plot_histograms(sens_dict, bins=30):
     return quantiles
 
 
-def main(sens_dir, samples_dir, language=LANGUAGE):
+def main(sens_dir, samples_dir, language=LANGUAGE, save_figures=True):
     tr.set_language(language)
 
-    pu.set_nes_plot_style()
+    pu.set_nes_plot_style(swedish=False)
     sens_models = list_model_names(sens_dir)
     sens_models = [sens_model.replace(".joblib", ".json") for sens_model in sens_models]
     quantiles = []
@@ -464,9 +463,10 @@ def main(sens_dir, samples_dir, language=LANGUAGE):
         setup["n_samples"],
         standard_solution["sal_results"],
     )
-    # STOP
-
     plot_quantiles(quantiles, setup["n_samples"], standard_solution["sal_results"])
+
+    if save_figures:
+        pu.multiPNG(f"figures/{sens_dir}/{LANGUAGE}/{sens_dir}", dpi=400)
 
 
 if __name__ == "__main__":
